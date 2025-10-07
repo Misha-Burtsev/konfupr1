@@ -61,6 +61,7 @@ else:
     VFS_TREE, VFS_ERR = {}, None
 
 CWD = []
+HISTORY = []
 PROMPT = os.path.basename(a.vfs) if a.vfs else "vfs"
 # (временно полезно)
 print("DEBUG VFS root:", sorted(VFS_TREE.keys()))
@@ -91,51 +92,15 @@ def _resolve(path):
             return None, None
     return cur, base
 
-def cmd_ls(arg=None):
-    # если аргумента нет — листим текущую директорию ('.')
-    target = arg if arg else '.'
-    node, _ = _resolve(target)
-    if node is None:
-        print("ls: нет такого пути");
-        return
-    if isinstance(node, dict):
-        names = sorted(node.keys())
-        print(' '.join(n + '/' if isinstance(node[n], dict) else n for n in names))
-    else:
-        print("(файл)")
-
-
-def cmd_cd(arg=None):
-    if not arg:
-        CWD.clear(); return
-    node, parts = _resolve(arg)
-    if node is None or not isinstance(node, dict):
-        print("cd: не каталог")
-    else:
-        CWD[:] = parts
-
-def run_line(line):
-    parts = shlex.split(line)
-    if not parts: return
-    cmd, *args = parts
-    if cmd == "ls":
-        cmd_ls(args[0] if args else None)
-    elif cmd == "cd":
-        cmd_cd(args[0] if args else None)
-    elif cmd == "exit":
-        sys.exit(0)
-    else:
-        print(f"Ошибка: команда '{cmd}' не существует.")
-
-# --- выполнение стартового скрипта (как и раньше) ---
-if a.script:
+def run_script(path):
     try:
-        with open(a.script, encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             for raw in f:
                 line = raw.strip()
                 if not line or line.startswith("#"):
                     continue
-                print(f"{PROMPT}$ {line}")
+                print(f"{PROMPT}$ {line}")   # эхо строки — печатаем ОДИН раз
+                HISTORY.append(line)         # если ведёте историю
                 try:
                     run_line(line)
                 except SystemExit:
@@ -145,10 +110,88 @@ if a.script:
     except Exception as e:
         print(f"SCRIPT ERROR: не удалось открыть скрипт: {e}")
 
+def cmd_ls(arg=None):
+    # без аргумента листим текущую директорию
+    target = arg if arg else '.'
+    node, _ = _resolve(target)
+    if node is None:
+        print(f"ls: нет такого файла или каталога")
+        return
+    if isinstance(node, dict):
+        names = sorted(node.keys())
+        print(' '.join(n + '/' if isinstance(node[n], dict) else n for n in names))
+    else:
+        # если это файл — как в UNIX: просто печатаем имя целевого файла
+        base = target.rstrip('/').split('/')[-1] or target
+        print(base)
+
+def cmd_cd(arg=None):
+    # без аргумента — в корень (аналог cd /)
+    if not arg:
+        CWD.clear()
+        return
+    node, parts = _resolve(arg)
+    if node is None:
+        print(f"cd: нет такого файла или каталога: {arg}")
+    elif not isinstance(node, dict):
+        print(f"cd: не каталог: {arg}")
+    else:
+        CWD[:] = parts
+
+def cmd_history(arg=None):
+    # history        -> весь список
+    # history N      -> последние N (N > 0)
+    if arg is None:
+        start = 0
+    else:
+        try:
+            n = int(arg)
+        except ValueError:
+            print(f"history: аргумент должен быть числом: {arg}")
+            return
+        start = 0 if n <= 0 else max(0, len(HISTORY) - n)
+
+    for i in range(start, len(HISTORY)):
+        print(f"{i+1}  {HISTORY[i]}")
+
+def cmd_clear():
+    # ANSI очистка экрана
+    print("\033[2J\033[H", end='')
+
+def cmd_rev(args):
+    # rev TEXT... -> печатает перевёрнутую строку
+    s = ' '.join(args)
+    print(s[::-1])
+
+
+def run_line(line):
+    parts = shlex.split(line)
+    if not parts: return
+    cmd, *args = parts
+    if cmd == "ls":
+        cmd_ls(args[0] if args else None)
+    elif cmd == "cd":
+        cmd_cd(args[0] if args else None)
+    elif cmd == "history":
+        cmd_history(args[0] if args else None)
+    elif cmd == "clear":
+        cmd_clear()
+    elif cmd == "rev":
+        cmd_rev(args)
+    elif cmd == "exit":
+        sys.exit(0)
+    else:
+        print(f"Ошибка: команда '{cmd}' не существует.")
+
+# --- запуск скрипта, если указан ---
+if a.script:
+    run_script(a.script)
+
 # --- REPL ---
 while True:
     try:
         line = input(f"{PROMPT}$ ")
+        HISTORY.append(line)
         run_line(line)
     except KeyboardInterrupt:
         print()

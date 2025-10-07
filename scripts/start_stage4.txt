@@ -1,0 +1,49 @@
+# --- Блок 1: ls / cd (корень, относительные/абсолютные пути) ---
+ls
+cd
+ls /
+cd .
+ls
+cd ..
+ls
+
+# несуществующее
+cd NO_SUCH
+ls NO_SUCH
+
+# файл (если есть readme.txt в корне — должен напечатать имя файла)
+ls readme.txt
+cd readme.txt   # ошибка: не каталог
+
+# --- Блок 2: глубокие пути (для vfs_deep) ---
+cd /level1
+ls
+cd level2
+ls
+cd ../level3
+ls
+cd /
+ls
+
+# --- Блок 3: папка с пробелом в имени (для vfs_multi) ---
+ls "folder with spaces"
+cd "folder with spaces"
+ls
+cd ..
+ls
+
+# --- Блок 4: history / clear / rev ---
+history
+history 3
+history 999
+history abc     # проверка нечислового аргумента
+
+rev один два три
+rev "text with spaces"
+
+clear            # просто проверяем, что не падает и очищает экран
+
+# --- Блок 5: ошибки парсинга и продолжение ---
+bad "arg          # кривые кавычки -> SCRIPT ERROR
+exit              # попытка завершить из скрипта -> SCRIPT ERROR
+ls                # продолжаем, чтобы убедиться, что скрипт не оборвался
