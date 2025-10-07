@@ -1,0 +1,4 @@
+# корректный скрипт
+ls
+cd folder
+ls "dir with spaces"

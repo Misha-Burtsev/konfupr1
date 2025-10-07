@@ -1,0 +1,4 @@
+# тестовый скрипт
+ls
+cd folder
+unknown
