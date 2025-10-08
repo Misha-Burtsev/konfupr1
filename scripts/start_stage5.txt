@@ -1,0 +1,47 @@
+# === Stage 5 test: cp / chown / help (+ошибки) ===
+
+# Базовые ориентиры
+ls
+ls /
+
+# ---- CP: корректные случаи (если файлы/папки есть в выбранном VFS) ----
+cp readme.txt a/readme_copy.txt          # vfs_min: копия в существующий каталог
+ls a
+cp a/x.txt /x_top.txt                    # vfs_min: копия в корень
+ls /
+
+cp "folder with spaces/note.txt" "/copy with space.txt"   # vfs_multi
+ls /
+
+cp bin/hello.bin bin/hello_copy.bin      # vfs_multi: бинарник (base64 в памяти)
+ls bin
+
+# ---- CP: ошибки ----
+cp a /new_dir                             # каталог без -r не поддерживается
+cp readme.txt /no/such/dir/file.txt       # несуществующий каталог назначения
+cp NO_SUCH /tmp.txt                       # источник не найден
+
+# ---- CHOWN: корректные и ошибочные случаи ----
+chown user1 readme.txt
+chown -R user2 a                          # vfs_min: рекурсивно на каталог a
+chown -R user3 level1                     # vfs_deep: рекурсивно на дерево
+chown user4 "folder with spaces/note.txt" # vfs_multi: файл с пробелом
+chown user5 NO_SUCH                       # ошибка: нет такого пути
+
+# ---- HELP ----
+help
+help cp chown
+help nosuch                               # неизвестная команда
+
+# ---- Дополнительно (видимость истории, очистка, обработка ошибок скрипта) ----
+history 10
+clear
+
+# Специально сломанная строка для проверки SCRIPT ERROR (shlex)
+bad "arg
+
+# Попытка завершить выполнение из скрипта (должно дать SCRIPT ERROR и продолжить)
+exit
+
+# Продолжаем — финальный ls, чтобы убедиться, что скрипт не оборвался
+ls /
